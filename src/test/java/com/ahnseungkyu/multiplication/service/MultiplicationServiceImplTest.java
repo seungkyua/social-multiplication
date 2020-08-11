@@ -1,6 +1,8 @@
 package com.ahnseungkyu.multiplication.service;
 
 import com.ahnseungkyu.multiplication.domain.Multiplication;
+import com.ahnseungkyu.multiplication.domain.MultiplicationResultAttempt;
+import com.ahnseungkyu.multiplication.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -30,7 +32,18 @@ public class MultiplicationServiceImplTest {
 
         assertThat(multiplication.getFactorA()).isEqualTo(50);
         assertThat(multiplication.getFactorB()).isEqualTo(30);
-        assertThat(multiplication.getResult()).isEqualTo(1500);
+    }
+
+    @Test
+    public void checkCorrectAttemptTest() {
+
+        Multiplication multiplication = new Multiplication(50, 60);
+        User user = new User("Seungkyu");
+        MultiplicationResultAttempt attempt = new MultiplicationResultAttempt(user, multiplication, 3010);
+
+        boolean attemptResult = multiplicationServiceImpl.checkAttempt(attempt);
+
+        assertThat(attemptResult).isFalse();
     }
 
 }
