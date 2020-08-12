@@ -1,11 +1,11 @@
 package com.ahnseungkyu.multiplication.controller;
 
-import com.ahnseungkyu.multiplication.controller.MultiplicationResultAttemptController.ResultResponse;
 import com.ahnseungkyu.multiplication.domain.Multiplication;
 import com.ahnseungkyu.multiplication.domain.MultiplicationResultAttempt;
 import com.ahnseungkyu.multiplication.domain.User;
 import com.ahnseungkyu.multiplication.service.MultiplicationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.assertj.core.util.Lists;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,7 +38,7 @@ public class MultiplicationResultAttemptControllerTest {
     private MockMvc mvc;
 
     private JacksonTester<MultiplicationResultAttempt> jsonResult;
-    private JacksonTester<ResultResponse> jsonResponse;
+    private JacksonTester<List<MultiplicationResultAttempt>> jsonResultAttemptList;
 
     @BeforeEach
     public void setUp() {
@@ -48,14 +50,16 @@ public class MultiplicationResultAttemptControllerTest {
         genericParameterizedTest(false);
     }
 
-    private void genericParameterizedTest(boolean correct) throws Exception {
+    @Test
+    private void genericParameterizedTest(final boolean correct) throws Exception {
         given(multiplicationService
                 .checkAttempt(any(MultiplicationResultAttempt.class)))
                 .willReturn(correct);
 
         User user = new User("Seungkyu");
         Multiplication multiplication = new Multiplication(50, 70);
-        MultiplicationResultAttempt attempt = new MultiplicationResultAttempt(user, multiplication, 3500);
+        MultiplicationResultAttempt attempt = new MultiplicationResultAttempt(
+                user, multiplication, 3500, correct);
 
         MockHttpServletResponse response = mvc.perform(
                 post("/results")
@@ -64,8 +68,33 @@ public class MultiplicationResultAttemptControllerTest {
                 .andReturn().getResponse();
 
         assertThat(response.getStatus()).isEqualTo(HttpStatus.OK.value());
-        assertThat(response.getContentAsString())
-                .isEqualTo(jsonResponse.write(new ResultResponse(correct)).getJson());
+        assertThat(response.getContentAsString()).isEqualTo(
+                jsonResult.write(
+                        new MultiplicationResultAttempt(
+                                attempt.getUser(),
+                                attempt.getMultiplication(),
+                                attempt.getResultAttempt(),
+                                correct
+                        )
+                ).getJson()
+        );
+    }
 
+    @Test
+    public void getUserStats() throws Exception {
+        User user = new User("Seungkyu");
+        Multiplication multiplication = new Multiplication(50, 70);
+        MultiplicationResultAttempt attempt = new MultiplicationResultAttempt(
+                user, multiplication, 3500, true);
+        List<MultiplicationResultAttempt> recentAttempts = Lists.newArrayList(attempt, attempt);
+        given(multiplicationService.getStatsForUser("Seungkyu")).willReturn(recentAttempts);
+
+        MockHttpServletResponse response = mvc.perform(get("/results")
+                .param("alias", "Seungkyu"))
+                .andReturn().getResponse();
+
+        assertThat(response.getStatus()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.getContentAsString())
+                .isEqualTo(jsonResultAttemptList.write(recentAttempts).getJson());
     }
 }
